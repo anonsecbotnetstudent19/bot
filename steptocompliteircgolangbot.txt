@@ -1,0 +1,4 @@
+go mod init irc-bot
+go get github.com/thoj/go-ircevent
+(now change go file is main.go)
+go build -ldflags="-H=windowsgui" -o irc-bot.exe
