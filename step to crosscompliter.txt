@@ -1,0 +1,17 @@
++)Big Endian (MIPS):
+GOARCH=mips GOOS=linux go build -o main-mips main.go
+
++)Little Endian (MIPSLE):
+GOARCH=mipsle GOOS=linux GOMIPS=softfloat go build -o main-mipsle main.go
+
++)Cross-compiling for macOS ARM64 (darwin)
+GOARCH=arm64 GOOS=darwin go build -o main-darwin-arm64 main.go
+
++)Run the Binary on the ARMv7 Device
+GOARCH=arm GOOS=linux GOARM=7 go build -o main-armv7 main.go
+
++)Cross-Compiling for x64 (64-bit)
+GOARCH=amd64 GOOS=linux go build -o main-amd64 main.go
+
++)Cross-Compiling for x86 (32-bit)
+GOARCH=386 GOOS=linux go build -o main-386 main.go
